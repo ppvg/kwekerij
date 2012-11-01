@@ -1,5 +1,8 @@
+config.h
+
 .dep
 .lib
 a.out
 *.hex
 *.o
+*.swp

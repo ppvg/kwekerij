@@ -1,4 +1,5 @@
 #include <OneWire.h>
+#include "config.h"
 
 // Constants
 #define onewirePin 10
