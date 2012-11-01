@@ -30,9 +30,13 @@ void loop(void) {
   getTemps();
   Serial.print("Number of sensors: ");
   Serial.println(numSensors);
-  /*Serial.println("")*/
-  /*Serial.print(temp);*/
-  /*Serial.println(" °C");*/
+  for (byte i=0; i<numSensors; i++) {
+    Serial.print("Sensor ");
+    Serial.print(i);
+    Serial.print(": ");
+    Serial.print(temps[i]);
+    Serial.println(" °C");
+  }
 
   int val = analogRead(potPin);
   Serial.print("Potvalue is: ");
@@ -57,9 +61,8 @@ void getTemps() {
 
       ds.reset();
       ds.select(addr);
-      ds.write(0x44,1); // "Start Conversion", with parasite power on at the end
+      ds.write(0x44); // "Start Conversion", without parasite power
 
-      delay(1000); // wait for capacitors to be charged - 750ms may be enough
       present = ds.reset(); // returns 1 if device asserted presence pulse
       ds.select(addr);
       ds.write(0xBE); // "Read Scratchpad"
@@ -73,7 +76,6 @@ void getTemps() {
     }
   }
   ds.reset_search();
-  delay(250);
 }
 
 bool validCRC(byte addr[]) {
