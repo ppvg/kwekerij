@@ -1,7 +1,6 @@
-
 **WARNING: This is a work in progress.**
 
-The goal of this Arduino 'sketch' is to provide a greenhouse temperature alarm system. We're using a serial GSM module (using SoftwareSerial and the AT protocol) and Dallas OneWire temperature sensors (type DS18B20).
+The goal of this *Arduino sketch* is to provide a greenhouse temperature alarm system. We're using a serial GSM module (using SoftwareSerial and the AT protocol) and Dallas OneWire temperature sensors (type DS18B20).
 
 Goals
 -----
@@ -18,26 +17,21 @@ The current code is a bit limited:
 * Temperature polling (but not checking).
 * Working threshold control and display (using a potetiometer and 3 LEDs).
 * Display timeout.
-* Predominantly integer arithmetic (×10 to simulate 1 decimal), except for display purposes.
+
+The next step is to write code for the GSM module.
 
 Compiling / uploading
 ---------------------
 
-The sketch should work fine with Arduino IDE 1.0. In addition, you can use `gcc-avr` and `make` to compile and/or upload the sketch. To compile:
+The sketch should work fine with Arduino IDE 1.0.
 
-    $ make
-or
-    $ make target
+In addition, you can use `gcc-avr` and `make` to compile and/or upload the sketch.
 
-To upload:
+* To compile: `make` or `make target`
+* To upload: `make upload`
+* Both: `make target upload`
 
-    $ make upload
-
-Both:
-
-    $ make target upload
-
-The Makefile is currently configured for an Arduino Pro Mini 5v (with Atmega-168). This can be configured by changing the `BOARD` variable in the Makefile to one of the names from Arduino's boards.txt (use Google), e.g. "uno". **Note:** This is not needed if you're using the Arduino IDE.
+The `Makefile` is currently configured for an Arduino Pro Mini 5v (with Atmega168). This can be configured by changing the `BOARD` variable in the `Makefile` to one of the names from Arduino's `boards.txt` (use Google), e.g. `"uno"`. **Note:** This is not needed if you're using the Arduino IDE.
 
 License
 -------
