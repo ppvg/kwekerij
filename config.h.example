@@ -1,6 +1,26 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
+// SMS settings
 #define phoneNumber "+31612121212"
+#define alarmTimeout 1800000 // 30 min. = 1000 × 60 × 30
+
+// Pin configuration
+#define potPin A0
+#define led1Pin 5
+#define led2Pin 6
+#define led3Pin 9
+#define onewirePin 10
+
+// Temperature settings
+#define maxSensors 10
+#define tempWinLow -50  // -5.0 °C
+#define tempWinHigh 100 // 10.0 °C
+#define thresholdMinChange 1 // 0.1 °C
+#define winSize (tempWinHigh-tempWinLow)
+#define tempCheckTimeout 1000 // 1 sec. = 1000 × 1 ms
+
+// Display settings
+#define displayTimeout 5000 // 5 sec. = 1000 × 5 ms
 
 #endif
