@@ -13,3 +13,5 @@ bool displayTimedOut();
 byte getSensorType(byte addr[]);
 
 #endif
+
+// vim:softtabstop=2:shiftwidth=2:expandtab:

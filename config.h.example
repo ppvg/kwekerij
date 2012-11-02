@@ -24,3 +24,5 @@
 #define displayTimeout 5000 // 5 sec. = 1000 × 5 ms
 
 #endif
+
+// vim:softtabstop=2:shiftwidth=2:expandtab:
