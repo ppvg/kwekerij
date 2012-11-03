@@ -8,6 +8,7 @@ Goals
 * When the temperature becomes to low, the device sends out an SMS (text message) to a predefined phone number.
 * When an SMS is sent to the device, it responds to the phone number of origin with a list of the current temperatures.
 * When a sensor is removed or malfunctions, an alart is sent to the predefined phone number.
+* Using three buttons, the user should be able to configure the threshold temperature for each zone/sensor separately; one button for "next sensor", one for + and one for - (in 0.1°C increments).
 
 Current functionality
 ---------------------
@@ -15,17 +16,22 @@ Current functionality
 The current code is a bit limited:
 
 * Temperature polling (but not checking).
-* Working threshold control and display (using a potetiometer and 3 LEDs).
+* Working ~~threshold control and~~ LCD display.
 * Display timeout.
 
-The next step is to write code for the GSM module.
+The next step is to implement threshold configuration and SMS functionality.
 
 Compiling / uploading
 ---------------------
 
-The sketch should work fine with Arduino IDE 1.0.
+To get started:
 
-In addition, you can use `gcc-avr` and `make` to compile and/or upload the sketch.
+* Copy `config.h.example` to `config.h` and edit it to fit your configuration.
+* Download the [OneWire library][1] and copy it to where your Arduino setup will find it.
+
+  [1]: http://www.pjrc.com/teensy/td_libs_OneWire.html "OneWire Arduino Library"
+
+You should then be able to compile and upload the sketch using **Arduino IDE 1.0** (we haven't tested in earlier versions). In addition, you can use `gcc-avr` and `make` to compile and/or upload the sketch.
 
 * To compile: `make` or `make target`
 * To upload: `make upload`
