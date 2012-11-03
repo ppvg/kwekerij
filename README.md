@@ -18,6 +18,7 @@ The current code is a bit limited:
 * Temperature polling (but not checking).
 * Working ~~threshold control and~~ LCD display.
 * Predefined sensor device addresses.
+* Button press detection.
 
 The next step is to implement threshold configuration and SMS functionality.
 

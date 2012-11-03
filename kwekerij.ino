@@ -19,13 +19,17 @@
 #include <LiquidCrystal.h>
 #include <EEPROM.h>
 #include <stdio.h>
-#include "functions.h"
+#include "Button.h"
+#include "kwekerij.h"
 #include "config.h"
 
 // All settings and constants are in "config.h".
 
-OneWire ds(onewire);
+OneWire       onewire(oneWirePin);
 LiquidCrystal lcd(lcdRS, lcdE, db4, db5, db6, db7);
+Button        btnNext(btnNextPin);
+Button        btnUp(btnUpPin);
+Button        btnDown(btnDownPin);
 
 int temps[numSensors]; // in °C ×10
 byte nextTempToCheck = 0;
@@ -40,16 +44,27 @@ void setup(void) {
   loadThresholds();
 }
 
+void checkButton(Button& button, char name[]) {
+  if (button.isPressed()) {
+    Serial.print(name);
+    Serial.print(" pressed");
+    if (button.wasUnique()) {
+      Serial.print(" (unique)");
+    }
+    Serial.println();
+  }
+}
+
 void loop(void) {
+  checkButton(btnNext, "Next");
+  checkButton(btnUp, "Up");
+  checkButton(btnDown, "Down");
   if (tempCheckNeeded()) {
     unsigned long start = millis();
     readNextTemp();
-    Serial.print("Temp lookup took ");
-    Serial.print(millis() - start);
-    Serial.println(" ms.");
     updateDisplay(true);
   }
-  delay(10);
+  delay(20);
 }
 
 //---- Function definitions -----//
@@ -82,9 +97,6 @@ void readNextTemp() {
   getRawData(sensorAddresses[nextTempToCheck], data);
   temps[nextTempToCheck] = dataToCelcius(data, 0);
   lastTempCheck = millis();
-  Serial.print(nextTempToCheck);
-  Serial.print(" is ");
-  Serial.println(temps[nextTempToCheck]);
   if (nextTempToCheck >= numSensors - 1)
     nextTempToCheck = 0;
   else
@@ -93,14 +105,14 @@ void readNextTemp() {
 
 byte getRawData(byte addr[], byte data[]) {
   byte present = 0;
-  ds.reset();
-  ds.select(addr);
-  ds.write(0x44); // "Start Conversion", without parasite power
-  present = ds.reset(); // 1 if device asserted presence pulse
-  ds.select(addr);
-  ds.write(0xBE); // "Read Scratchpad"
+  onewire.reset();
+  onewire.select(addr);
+  onewire.write(0x44); // "Start Conversion", without parasite power
+  present = onewire.reset(); // 1 if device asserted presence pulse
+  onewire.select(addr);
+  onewire.write(0xBE); // "Read Scratchpad"
   for (byte i=0; i<9; i++) {
-    data[i] = ds.read();
+    data[i] = onewire.read();
   }
   return present;
 }
