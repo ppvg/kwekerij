@@ -16,12 +16,16 @@
 */
 
 #include <OneWire.h>
+#include <LiquidCrystal.h>
+#include <stdio.h>
 #include "functions.h"
 #include "config.h"
 
 // All settings and constants are in "config.h".
 
-OneWire ds(onewirePin);
+OneWire ds(onewire);
+LiquidCrystal lcd(lcdRS, lcdE, db4, db5, db6, db7);
+
 int temps[maxSensors]; // in °C ×10
 int threshold; // in °C ×10
 byte numSensors;
@@ -30,17 +34,15 @@ unsigned long lastThresholdChange = 0; // in millis()
 bool displayOn = false;
 
 void setup(void) {
-  pinMode(led1Pin, OUTPUT);
-  pinMode(led2Pin, OUTPUT);
-  pinMode(led3Pin, OUTPUT);
-  pinMode(potPin, INPUT);
-  digitalWrite(potPin, HIGH); // internal pull-up resistor
+  pinMode(potentiometer, INPUT);
+  digitalWrite(potentiometer, HIGH); // internal pull-up resistor
+  lcd.begin(16, 2);
   Serial.begin(9600);
 }
 
 void loop(void) {
-  bool changed = getThreshold();
-  updateDisplay(changed);
+  //bool changed = getThreshold();
+  updateDisplay(true);
 
   if (tempCheckNeeded()) {
     getTemps();
@@ -119,7 +121,7 @@ void printTemps() {
 }
 
 bool getThreshold() {
-  int val = 1023 - analogRead(potPin);
+  int val = 1023 - analogRead(potentiometer);
   float newThreshold = ((float)val/1023) * winSize + tempWinLow;
   int diff = threshold - newThreshold;
   if (diff < -thresholdMinChange || diff > thresholdMinChange) {
@@ -136,33 +138,26 @@ void updateDisplay(bool changed) {
   if (!changed && !displayOn) { return; }
 
   if (changed) {
-    int led1 = 0, led2 = 0, led3 = 0;
-    lastThresholdChange = millis();
-    displayOn = true;
-    float factor = (float)(threshold-tempWinLow) / winSize;
-    Serial.println(factor);
-    if (factor < 0.5) {
-      int value = 255 * factor * 2;
-      Serial.print("<0.5: ");
-      Serial.println(value);
-      led1 = 255 - value;
-      led2 = value;
-    } else {
-      int value = 255 * (1 - factor) * 2;
-      Serial.print(">0.5: ");
-      Serial.println(value);
-      led2 = value;
-      led3 = 255 - value;
-    }
-    analogWrite(led1Pin, led1);
-    analogWrite(led2Pin, led2);
-    analogWrite(led3Pin, led3);
+    lcd.clear();
+    printTemp(temps[0]);
+    printTemp(temps[1]);
+    printTemp(temps[2]);
   } else if (displayTimedOut()) {
     displayOn = false;
-    analogWrite(led1Pin, 0);
-    analogWrite(led2Pin, 0);
-    analogWrite(led3Pin, 0);
+    lcd.clear();
   }
+}
+
+void printTemp(int temp) {
+  lcd.print(temp/10);  // prints the int part
+  lcd.print("."); // print the decimal point
+  unsigned int frac;
+  if (temp >= 0)
+      frac = temp - (temp/10)*10;
+  else
+      frac = (temp/10)*10 - temp;
+  lcd.print(frac, DEC);
+  lcd.print(" ");
 }
 
 bool displayTimedOut() {

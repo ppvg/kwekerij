@@ -9,6 +9,7 @@ int dataToCelcius(byte data[], byte sensor_type);
 void printTemps();
 bool getThreshold();
 void updateDisplay(bool changed);
+void printTemp(int temp);
 bool displayTimedOut();
 byte getSensorType(byte addr[]);
 
