@@ -17,6 +17,7 @@
 
 #include <OneWire.h>
 #include <LiquidCrystal.h>
+#include <EEPROM.h>
 #include <stdio.h>
 #include "functions.h"
 #include "config.h"
@@ -26,56 +27,68 @@
 OneWire ds(onewire);
 LiquidCrystal lcd(lcdRS, lcdE, db4, db5, db6, db7);
 
-int temps[maxSensors]; // in °C ×10
-int threshold; // in °C ×10
-byte numSensors;
+int temps[numSensors]; // in °C ×10
+byte nextTempToCheck = 0;
+int thresholds[numSensors]; // in °C ×10
+int selectedThreshold = -1;
 unsigned long lastTempCheck = 0; // in millis()
-unsigned long lastThresholdChange = 0; // in millis()
-bool displayOn = false;
+unsigned long settingsTimeout= 0; // in millis()
 
 void setup(void) {
-  pinMode(potentiometer, INPUT);
-  digitalWrite(potentiometer, HIGH); // internal pull-up resistor
   lcd.begin(16, 2);
   Serial.begin(9600);
+  loadThresholds();
 }
 
 void loop(void) {
-  //bool changed = getThreshold();
-  updateDisplay(true);
-
   if (tempCheckNeeded()) {
-    getTemps();
-    printTemps();
+    unsigned long start = millis();
+    readNextTemp();
+    Serial.print("Temp lookup took ");
+    Serial.print(millis() - start);
+    Serial.println(" ms.");
+    updateDisplay(true);
   }
-
-  delay(100);
+  delay(10);
 }
-
 
 //---- Function definitions -----//
 
-bool tempCheckNeeded() {
-  return millis() - lastTempCheck > tempCheckTimeout;
+void loadThresholds() {
+  for (byte i=0; i<numSensors; i++) {
+    thresholds[i] = readThreshold(i);
+  }
 }
 
-void getTemps() {
-  byte addr[8];
-  byte data[9];
-  byte sensorType = 0; // Our sensors are all DS18B20 (see getSensorType)
+int readThreshold(byte i) {
+  byte bytes[2] = {
+    EEPROM.read(i*2),
+    EEPROM.read(i*2 + 1)
+  };
+  return (bytes[1] << 8) | bytes[0];
+}
 
-  numSensors = 0;
-  while (numSensors < maxSensors && ds.search(addr)) {
-    if (OneWire::crc8(addr, 7) == addr[7]) {
-      numSensors += 1;
-      getRawData(addr, data);
-      temps[numSensors-1] = dataToCelcius(data, sensorType);
-    } else {
-      Serial.println("CRC is not valid!");
-    }
-  }
-  ds.reset_search();
+void writeThreshold(byte i, int value) {
+  EEPROM.write(i*2, value & 0xFF);
+  EEPROM.write(i*2 + 1, (value >> 8) & 0xFF);
+}
+
+bool tempCheckNeeded() {
+  return (millis() - lastTempCheck) > (tempCheckTimeout / numSensors);
+}
+
+void readNextTemp() {
+  byte data[9];
+  getRawData(sensorAddresses[nextTempToCheck], data);
+  temps[nextTempToCheck] = dataToCelcius(data, 0);
   lastTempCheck = millis();
+  Serial.print(nextTempToCheck);
+  Serial.print(" is ");
+  Serial.println(temps[nextTempToCheck]);
+  if (nextTempToCheck >= numSensors - 1)
+    nextTempToCheck = 0;
+  else
+    nextTempToCheck += 1;
 }
 
 byte getRawData(byte addr[], byte data[]) {
@@ -108,43 +121,15 @@ int dataToCelcius(byte data[], byte sensorType) {
   return (raw * 10) / 16;
 }
 
-void printTemps() {
-  Serial.print("Number of sensors: ");
-  Serial.println(numSensors);
-  for (byte i=0; i<numSensors; i++) {
-    Serial.print("Sensor ");
-    Serial.print(i);
-    Serial.print(": ");
-    Serial.print((float)temps[i]/10);
-    Serial.println(" °C");
-  }
-}
-
-bool getThreshold() {
-  int val = 1023 - analogRead(potentiometer);
-  float newThreshold = ((float)val/1023) * winSize + tempWinLow;
-  int diff = threshold - newThreshold;
-  if (diff < -thresholdMinChange || diff > thresholdMinChange) {
-    Serial.print("New threshold: ");
-    Serial.print(newThreshold/10);
-    Serial.println(" °C");
-    threshold = (int)newThreshold;
-    return true;
-  }
-  return false;
-}
-
 void updateDisplay(bool changed) {
-  if (!changed && !displayOn) { return; }
-
   if (changed) {
     lcd.clear();
     printTemp(temps[0]);
     printTemp(temps[1]);
     printTemp(temps[2]);
-  } else if (displayTimedOut()) {
-    displayOn = false;
-    lcd.clear();
+    lcd.setCursor(0, 1);
+    printTemp(temps[3]);
+    printTemp(temps[4]);
   }
 }
 
@@ -159,11 +144,6 @@ void printTemp(int temp) {
   lcd.print(frac, DEC);
   lcd.print(" ");
 }
-
-bool displayTimedOut() {
-  return millis() - lastThresholdChange > displayTimeout;
-}
-
 
 //---------- Unused functions ---------//
 

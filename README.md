@@ -17,7 +17,7 @@ The current code is a bit limited:
 
 * Temperature polling (but not checking).
 * Working ~~threshold control and~~ LCD display.
-* Display timeout.
+* Predefined sensor device addresses.
 
 The next step is to implement threshold configuration and SMS functionality.
 

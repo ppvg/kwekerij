@@ -2,15 +2,16 @@
 #define __FUNCTIONS_H__
 
 // Function prototypes
+void loadThresholds();
+int readThreshold(byte i);
+void writeThreshold(byte i, int value);
 bool tempCheckNeeded();
-void getTemps();
+void readNextTemp();
 byte getRawData(byte addr[], byte data[]);
 int dataToCelcius(byte data[], byte sensor_type);
-void printTemps();
 bool getThreshold();
 void updateDisplay(bool changed);
 void printTemp(int temp);
-bool displayTimedOut();
 byte getSensorType(byte addr[]);
 
 #endif
