@@ -32,38 +32,66 @@ Button        btnUp(btnUpPin);
 Button        btnDown(btnDownPin);
 
 int temps[numSensors]; // in °C ×10
-byte nextTempToCheck = 0;
 int thresholds[numSensors]; // in °C ×10
-int selectedThreshold = -1;
+byte nextTempToCheck = 0;
+byte selectedThreshold = numSensors; // numSensors == "overview"
 unsigned long lastTempCheck = 0; // in millis()
-unsigned long settingsTimeout= 0; // in millis()
+unsigned long lastButtonPress = millis(); // in millis()
+bool displayActive = true;
 
 void setup(void) {
+  pinMode(backlight, OUTPUT);
   lcd.begin(16, 2);
   Serial.begin(9600);
   loadThresholds();
-}
-
-void checkButton(Button& button, char name[]) {
-  if (button.isPressed()) {
-    Serial.print(name);
-    Serial.print(" pressed");
-    if (button.wasUnique()) {
-      Serial.print(" (unique)");
-    }
-    Serial.println();
-  }
+  updateDisplay();
 }
 
 void loop(void) {
-  checkButton(btnNext, "Next");
-  checkButton(btnUp, "Up");
-  checkButton(btnDown, "Down");
-  if (tempCheckNeeded()) {
-    unsigned long start = millis();
-    readNextTemp();
-    updateDisplay(true);
+  bool displayNeedsUpdate = true;
+
+  if (displayActive) {
+    if (millis()-lastButtonPress > displayTimeout) {
+      Serial.println("Display timed out");
+      displayActive = false;
+      selectedThreshold = numSensors;
+    } else {
+      if (btnNext.isPressed()) {
+        Serial.println("Next");
+        selectedThreshold += 1;
+        if (selectedThreshold > numSensors)
+          selectedThreshold = 0;
+        lastButtonPress = millis();
+      } else if (btnUp.isPressed()) {
+        Serial.println("Up");
+        if (selectedThreshold < numSensors) {
+          thresholds[selectedThreshold] += 1;
+          writeThreshold(selectedThreshold, thresholds[selectedThreshold]);
+        }
+        lastButtonPress = millis();
+      } else if (btnDown.isPressed()) {
+        Serial.println("Down");
+        if (selectedThreshold < numSensors) {
+          thresholds[selectedThreshold] -= 1;
+          writeThreshold(selectedThreshold, thresholds[selectedThreshold]);
+        }
+        lastButtonPress = millis();
+      } else {
+        displayNeedsUpdate = false;
+      }
+    }
+  } else if (btnNext.isPressed() || btnUp.isPressed() || btnDown.isPressed()) {
+    displayActive = true;
+    lastButtonPress = millis();
   }
+
+  if (tempCheckNeeded()) {
+    readNextTemp();
+    displayNeedsUpdate = true;
+  }
+
+  if (displayNeedsUpdate)
+    updateDisplay();
   delay(20);
 }
 
@@ -133,19 +161,37 @@ int dataToCelcius(byte data[], byte sensorType) {
   return (raw * 10) / 16;
 }
 
-void updateDisplay(bool changed) {
-  if (changed) {
-    lcd.clear();
-    printTemp(temps[0]);
-    printTemp(temps[1]);
-    printTemp(temps[2]);
-    lcd.setCursor(0, 1);
-    printTemp(temps[3]);
-    printTemp(temps[4]);
+void updateDisplay() {
+  lcd.clear();
+  if (displayActive) {
+    digitalWrite(backlight, HIGH);
+    if (selectedThreshold < numSensors) {
+      lcd.print("Grenswaarde");
+      lcd.setCursor(0, 1);
+      lcd.print("Kas ");
+      lcd.print(selectedThreshold+1);
+      lcd.print(": ");
+      printTemp(thresholds[selectedThreshold]);
+      lcd.print("C");
+    } else if (selectedThreshold == numSensors) {
+      printTemp(temps[0]);
+      printTemp(temps[1]);
+      printTemp(temps[2]);
+      lcd.setCursor(0, 1);
+      printTemp(temps[3]);
+      printTemp(temps[4]);
+    } else {
+      lcd.print("Ewut?");
+    }
+  } else {
+    digitalWrite(backlight, LOW);
   }
 }
 
 void printTemp(int temp) {
+  if (temp < 0 && temp > -10) {
+    lcd.print("-");
+  }
   lcd.print(temp/10);  // prints the int part
   lcd.print("."); // print the decimal point
   unsigned int frac;

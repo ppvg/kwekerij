@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2012  Tijmen Leroi and Peter-Paul van Gemerden
+* Copyright (C) 2012  Peter-Paul van Gemerden
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by

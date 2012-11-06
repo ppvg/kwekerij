@@ -18,9 +18,10 @@ The current code is a bit limited:
 * Temperature polling (but not checking).
 * Working ~~threshold control and~~ LCD display.
 * Predefined sensor device addresses.
-* Button press detection.
+* Configurable threshold levels (saved in EEPROM).
+* Display and backlight timeout and wakeup.
 
-The next step is to implement threshold configuration and SMS functionality.
+The next step is to implement SMS functionality.
 
 Compiling / uploading
 ---------------------
