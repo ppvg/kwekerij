@@ -35,63 +35,44 @@ int temps[numSensors]; // in °C ×10
 int thresholds[numSensors]; // in °C ×10
 byte nextTempToCheck = 0;
 byte selectedThreshold = numSensors; // numSensors == "overview"
-unsigned long lastTempCheck = 0; // in millis()
-unsigned long lastButtonPress = millis(); // in millis()
+unsigned long lastTempCheck = 0;
+unsigned long lastButtonPress = millis();
+unsigned long lastAlarmSMS = 0;
 bool displayActive = true;
+bool alarmActive = false;
 
 void setup(void) {
   pinMode(backlight, OUTPUT);
+  digitalWrite(backlight, HIGH);
   lcd.begin(16, 2);
   Serial.begin(9600);
   loadThresholds();
-  updateDisplay();
+  lcd.clear();
+  lcd.print("   Bezig met");
+  lcd.setCursor(0, 1);
+  lcd.print("   opwarmen...");
+  for (byte i=0; i<2*numSensors; i++) {
+    readNextTemp();
+  }
+  delay(5000);
 }
 
 void loop(void) {
-  bool displayNeedsUpdate = true;
-
   if (displayActive) {
-    if (millis()-lastButtonPress > displayTimeout) {
-      Serial.println("Display timed out");
-      displayActive = false;
-      selectedThreshold = numSensors;
+    if (displayTimedOut()) {
+      deactivateDisplay();
     } else {
-      if (btnNext.isPressed()) {
-        Serial.println("Next");
-        selectedThreshold += 1;
-        if (selectedThreshold > numSensors)
-          selectedThreshold = 0;
-        lastButtonPress = millis();
-      } else if (btnUp.isPressed()) {
-        Serial.println("Up");
-        if (selectedThreshold < numSensors) {
-          thresholds[selectedThreshold] += 1;
-          writeThreshold(selectedThreshold, thresholds[selectedThreshold]);
-        }
-        lastButtonPress = millis();
-      } else if (btnDown.isPressed()) {
-        Serial.println("Down");
-        if (selectedThreshold < numSensors) {
-          thresholds[selectedThreshold] -= 1;
-          writeThreshold(selectedThreshold, thresholds[selectedThreshold]);
-        }
-        lastButtonPress = millis();
-      } else {
-        displayNeedsUpdate = false;
-      }
+      handleButtonPress();
     }
-  } else if (btnNext.isPressed() || btnUp.isPressed() || btnDown.isPressed()) {
-    displayActive = true;
-    lastButtonPress = millis();
+  } else if (buttonPressed()) {
+    activateDisplay();
   }
 
   if (tempCheckNeeded()) {
     readNextTemp();
-    displayNeedsUpdate = true;
-  }
-
-  if (displayNeedsUpdate)
+    checkTemps();
     updateDisplay();
+  }
   delay(20);
 }
 
@@ -114,6 +95,57 @@ int readThreshold(byte i) {
 void writeThreshold(byte i, int value) {
   EEPROM.write(i*2, value & 0xFF);
   EEPROM.write(i*2 + 1, (value >> 8) & 0xFF);
+}
+
+bool displayTimedOut() {
+  return displayTimeout < (millis() - lastButtonPress);
+}
+
+void handleButtonPress() {
+  bool displayNeedsUpdate = true;
+  if (btnNext.isPressed()) {
+    Serial.println("Next");
+    selectedThreshold += 1;
+    if (selectedThreshold > numSensors)
+      selectedThreshold = 0;
+    lastButtonPress = millis();
+
+  } else if (btnUp.isPressed()) {
+    Serial.println("Up");
+    if (selectedThreshold < numSensors) {
+      thresholds[selectedThreshold] += 1;
+      writeThreshold(selectedThreshold, thresholds[selectedThreshold]);
+    }
+    lastButtonPress = millis();
+  } else if (btnDown.isPressed()) {
+    Serial.println("Down");
+    if (selectedThreshold < numSensors) {
+      thresholds[selectedThreshold] -= 1;
+      writeThreshold(selectedThreshold, thresholds[selectedThreshold]);
+    }
+    lastButtonPress = millis();
+  } else {
+    displayNeedsUpdate = false;
+  }
+  if (displayNeedsUpdate) {
+    updateDisplay();
+  }
+}
+
+bool buttonPressed() {
+  return btnNext.isPressed() || btnUp.isPressed() || btnDown.isPressed();
+}
+
+void deactivateDisplay() {
+  selectedThreshold = numSensors;
+  displayActive = false;
+  updateDisplay();
+}
+
+void activateDisplay() {
+  lastButtonPress = millis();
+  displayActive = true;
+  updateDisplay();
 }
 
 bool tempCheckNeeded() {
@@ -159,6 +191,34 @@ int dataToCelcius(byte data[], byte sensorType) {
     else if (cfg == 0x40) raw = raw << 1; // 11 bit res, 375 ms
   }
   return (raw * 10) / 16;
+}
+
+void checkTemps() {
+  bool alarm = false;
+  for (byte i=0; i<numSensors; i++) {
+    if (temps[i] < thresholds[i]) {
+      alarm = true;
+    }
+  }
+  alarmActive = alarm;
+  if (alarm) {
+    Serial.println("--- ALARM ---");
+    if (alarmSMSNeeded()) {
+      sendAlarmSMS();
+    }
+  }
+}
+
+bool alarmSMSNeeded() {
+  if (lastAlarmSMS == 0)
+    return true;
+  return alarmTimeout < (millis() - lastAlarmSMS);
+}
+
+void sendAlarmSMS() {
+  lastAlarmSMS = millis();
+  Serial.println("=== SEND ALARM SMS ===");
+  // TODO
 }
 
 void updateDisplay() {

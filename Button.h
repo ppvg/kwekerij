@@ -19,8 +19,8 @@
 #define __BUTTON_H__
 
 // Behaviour configuration
-#define REPEAT_DELAY    500
-#define REPEAT_INTERVAL 180
+#define REPEAT_DELAY    400
+#define REPEAT_INTERVAL 100
 
 // State constants
 #define CURRENT  0
