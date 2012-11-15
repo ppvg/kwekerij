@@ -16,6 +16,7 @@
 */
 
 #include <OneWire.h>
+#include <SoftwareSerial.h>
 #include <LiquidCrystal.h>
 #include <EEPROM.h>
 #include <stdio.h>
@@ -25,11 +26,12 @@
 
 // All settings and constants are in "config.h".
 
-OneWire       onewire(oneWirePin);
-LiquidCrystal lcd(lcdRS, lcdE, db4, db5, db6, db7);
-Button        btnNext(btnNextPin);
-Button        btnUp(btnUpPin);
-Button        btnDown(btnDownPin);
+OneWire        onewire(oneWirePin);
+LiquidCrystal  lcd(lcdRS, lcdE, db4, db5, db6, db7);
+SoftwareSerial gsmSerial(gsmRX, gsmTX);
+Button         btnNext(btnNextPin);
+Button         btnUp(btnUpPin);
+Button         btnDown(btnDownPin);
 
 int temps[numSensors]; // in °C ×10
 int thresholds[numSensors]; // in °C ×10
@@ -46,15 +48,9 @@ void setup(void) {
   digitalWrite(backlight, HIGH);
   lcd.begin(16, 2);
   Serial.begin(9600);
+  gsmSerial.begin(9600);
   loadThresholds();
-  lcd.clear();
-  lcd.print("   Bezig met");
-  lcd.setCursor(0, 1);
-  lcd.print("   opwarmen...");
-  for (byte i=0; i<2*numSensors; i++) {
-    readNextTemp();
-  }
-  delay(5000);
+  warmUp();
 }
 
 void loop(void) {
@@ -77,6 +73,71 @@ void loop(void) {
 }
 
 //---- Function definitions -----//
+
+void warmUp() {
+  Serial.println("Bezig met opwarmen...");
+  lcd.clear();
+  lcd.print("   Bezig met    ");
+  lcd.setCursor(0, 1);
+  lcd.print("   opwarmen...  ");
+  initGsm();
+  for (byte i=0; i<3*numSensors; i++) {
+    readNextTemp();
+  }
+  if (!gsmOk()) {
+    haltWithGsmError();
+  }
+  Serial.println("Opwarmen voltooid.");
+  lastButtonPress = millis();
+}
+
+void initGsm() {
+  delay(2000);
+  gsmSerial.print("AT+CMGF=1\r"); // Set text mode.
+  delay(1000);
+  if (!gsmOk()) {
+    haltWithGsmError();
+  }
+  gsmSerial.print("AT+CPIN=0000\r");  // Enter pin, hardcoded
+  delay(1000);
+}
+
+bool gsmOk() {
+  /*gsmSkipLine();*/
+  char line[100];
+  gsmReadLine(line);
+  return strcmp(line, "OK\r\n") == 0;
+}
+
+void haltWithGsmError() {
+  while (!gsmOk()) {
+    Serial.println("Opstarten GSM mislukt!");
+    lcd.clear();
+    lcd.print(" Opstarten GSM  ");
+    lcd.setCursor(0, 1);
+    lcd.print("    mislukt!    ");
+    delay(5000);
+  }
+}
+
+void gsmSkipLine() {
+  for (byte i=0; i<255; i++) {
+    while (!gsmSerial.available()) delay(10);
+    if (gsmSerial.read()== '\n') break;
+  }
+}
+
+void gsmReadLine(char *line) {
+  byte i=0;
+  for (; i<100; i++) {
+    while (!gsmSerial.available()) delay(10);
+    line[i] = gsmSerial.read();
+    if (line[i] == '\n') break;
+  }
+  i++;
+  line[i]=0;
+}
+
 
 void loadThresholds() {
   for (byte i=0; i<numSensors; i++) {
@@ -154,8 +215,12 @@ bool tempCheckNeeded() {
 
 void readNextTemp() {
   byte data[9];
-  getRawData(sensorAddresses[nextTempToCheck], data);
-  temps[nextTempToCheck] = dataToCelcius(data, 0);
+  byte present = getRawData(sensorAddresses[nextTempToCheck], data);
+  if (present) {
+    temps[nextTempToCheck] = dataToCelcius(data, 0);
+  } else {
+    temps[nextTempToCheck] = -42;
+  }
   lastTempCheck = millis();
   if (nextTempToCheck >= numSensors - 1)
     nextTempToCheck = 0;
@@ -217,8 +282,20 @@ bool alarmSMSNeeded() {
 
 void sendAlarmSMS() {
   lastAlarmSMS = millis();
-  Serial.println("=== SEND ALARM SMS ===");
-  // TODO
+  Serial.println("=== SENDING ALARM SMS ===");
+  delay(100);
+  gsmSerial.print("AT+CMGS=");
+  gsmSerial.print(alarmNumber);
+  gsmSerial.print("\r");
+  delay(100);
+  gsmSerial.print("Alarm! Temperatuur te laag.\n");
+  for (byte i=0; i<numSensors; i++) {
+    gsmSerial.print("\n");
+    smsTemp(temps[i]);
+  }
+  delay(10);
+  gsmSerial.print("\x1A"); //Send it ascii SUB
+  delay(100);
 }
 
 void updateDisplay() {
@@ -261,6 +338,21 @@ void printTemp(int temp) {
       frac = (temp/10)*10 - temp;
   lcd.print(frac, DEC);
   lcd.print(" ");
+}
+
+void smsTemp(int temp) {
+  if (temp < 0 && temp > -10) {
+    gsmSerial.print("-");
+  }
+  gsmSerial.print(temp/10);  // prints the int part
+  gsmSerial.print("."); // print the decimal point
+  unsigned int frac;
+  if (temp >= 0)
+      frac = temp - (temp/10)*10;
+  else
+      frac = (temp/10)*10 - temp;
+  gsmSerial.print(frac, DEC);
+  gsmSerial.print(" ");
 }
 
 //---------- Unused functions ---------//

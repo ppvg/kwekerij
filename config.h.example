@@ -8,12 +8,13 @@
 #define db4   5
 #define lcdE  6
 #define lcdRS 7
-#define gsmRX 8
-#define gsmTX 9
+#define gsmRX 9
+#define gsmTX 8
 #define btnDownPin 10
 #define btnUpPin   11
 #define btnNextPin 12
-#define oneWirePin A0
+#define backlight  A0
+#define oneWirePin A1
 
 // Temperature settings
 #define numSensors 3

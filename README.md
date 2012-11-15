@@ -1,6 +1,11 @@
 **WARNING: This is a work in progress.**
 
-The goal of this *Arduino sketch* is to provide a greenhouse temperature alarm system. We're using a serial GSM module (using SoftwareSerial and the AT protocol) and Dallas OneWire temperature sensors (type DS18B20).
+The goal of this *Arduino sketch* is to provide a greenhouse temperature alarm system. We're using:
+
+* a serial GSM module (using SoftwareSerial and the AT protocol),
+* Dallas OneWire temperature sensors (type DS18B20),
+* a 2×16 character Hitachi HD44780 compatible LCD screen,
+* a few buttons (momentary switches).
 
 Goals
 -----
@@ -13,15 +18,15 @@ Goals
 Current functionality
 ---------------------
 
-The current code is a bit limited:
+We're now at the point where we can start testing the module in day-to-day use. Current functionality includes:
 
-* Temperature polling (but not checking).
-* Working ~~threshold control and~~ LCD display.
-* Predefined sensor device addresses.
-* Configurable threshold levels (saved in EEPROM).
+* Temperature polling and checking.
+* LCD display and control with a simple menu structure.
+* Configurable thresholds (saved to EEPROM).
+* SMS alarm when one of the temps goes under its threshold.
 * Display and backlight timeout and wakeup.
 
-The next step is to implement SMS functionality.
+The next step is to clean up the code a bit and implement SMS responses.
 
 Compiling / uploading
 ---------------------
